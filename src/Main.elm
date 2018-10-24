@@ -5,7 +5,7 @@ import Html exposing (Html, div, h1, img, table, td, text, th, tr)
 import Html.Attributes exposing (src, style)
 import Http
 import Json.Decode as Decode exposing (Decoder)
-
+import Json.Decode.Pipeline exposing (required, optional, hardcoded)
 
 
 ---- MODEL ----
@@ -17,18 +17,17 @@ type alias Model =
 
 type alias VisitorActivity =
     { visitorId : Int
+    , sessionId : String
+    , experienceId : Int
     , activityType : String
+    , activityTime : String
     , activityName : String
     }
 
 
 init : ( Model, Cmd Msg )
 init =
-    ( [ { visitorId = 0
-        , activityType = "First type"
-        , activityName = "First Name"
-        }
-      ]
+    ( []
     , getVisitorActivities
     )
 
@@ -55,10 +54,14 @@ update msg model =
                     , Cmd.none
                     )
 
-                Err _ ->
-                    ( model
-                    , Cmd.none
-                    )
+                Err err ->
+                    let
+                        _ = Debug.log "Error" err
+                    in
+                    
+                        ( model
+                        , Cmd.none
+                        )
 
 
 
@@ -82,7 +85,10 @@ generateRows model =
                 (\element ->
                     tr []
                         [ td [] [ text (String.fromInt element.visitorId) ]
+                        , td [] [ text element.sessionId ]
+                        , td [] [ text (String.fromInt element.experienceId) ]
                         , td [] [ text element.activityType ]
+                        , td [] [ text element.activityTime ]
                         , td [] [ text element.activityName ]
                         ]
                 )
@@ -91,7 +97,10 @@ generateRows model =
         header =
             tr []
                 [ th [] [ text "Visitor Id" ]
+                , th [] [ text "Session Id" ]
+                , th [] [ text "Experience Id" ]
                 , th [] [ text "Activity Type" ]
+                , th [] [ text "Activity Time" ]
                 , th [] [ text "Activity Name" ]
                 ]
     in
@@ -141,7 +150,10 @@ activitiesDecoder =
 
 activityDecoder : Decoder VisitorActivity
 activityDecoder =
-    Decode.map3 VisitorActivity
-        (Decode.field "visitor_id" Decode.int)
-        (Decode.field "activity_type" Decode.string)
-        (Decode.field "activity_name" Decode.string)
+    Decode.succeed VisitorActivity
+        |> required "visitor_id" Decode.int
+        |> required "session_id" Decode.string
+        |> required "experience_id" Decode.int
+        |> required "activity_type" Decode.string
+        |> required "activity_time" Decode.string
+        |> required "activity_name" Decode.string
