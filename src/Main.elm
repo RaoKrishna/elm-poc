@@ -1,159 +1,146 @@
 module Main exposing (Model, Msg(..), init, main, update, view)
 
 import Browser
-import Html exposing (Html, div, h1, img, table, td, text, th, tr)
-import Html.Attributes exposing (src, style)
-import Http
-import Json.Decode as Decode exposing (Decoder)
-import Json.Decode.Pipeline exposing (required, optional, hardcoded)
+import Browser.Navigation as Nav
+import Html exposing (..)
+import Html.Attributes exposing (..)
+import Url
+import Url.Parser as Parser exposing ((</>), Parser, custom, fragment, map, oneOf, s, top)
+import Visitor
+
+
+
+-- MAIN
+
+
+main : Program () Model Msg
+main =
+    Browser.application
+        { init = init
+        , view = view
+        , update = update
+        , subscriptions = subscriptions
+        , onUrlChange = UrlChanged
+        , onUrlRequest = LinkClicked
+        }
+
 
 
 ---- MODEL ----
 
 
 type alias Model =
-    List VisitorActivity
-
-
-type alias VisitorActivity =
-    { visitorId : Int
-    , sessionId : String
-    , experienceId : Int
-    , activityType : String
-    , activityTime : String
-    , activityName : String
+    { key : Nav.Key
+    , page : Page
     }
 
 
-init : ( Model, Cmd Msg )
-init =
-    ( []
-    , getVisitorActivities
-    )
+type Page
+    = Visitor Visitor.Model
 
 
-
----- UPDATE ----
+init : () -> Url.Url -> Nav.Key -> ( Model, Cmd Msg )
+init _ url key =
+    -- stepUrl url
+    --     { key = key
+    --     , page = Visitor Visitor.initialModel
+    --     }
+    stepVisitor
+        { key = key
+        , page = Visitor Visitor.initialModel
+        }
+        Visitor.init
 
 
 type Msg
-    = NoOp
-    | GetActivities (Result Http.Error (List VisitorActivity))
+    = LinkClicked Browser.UrlRequest
+    | UrlChanged Url.Url
+    | VisitorMsg Visitor.Msg
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case msg of
-        NoOp ->
-            ( model, Cmd.none )
+        LinkClicked urlRequest ->
+            case urlRequest of
+                Browser.Internal url ->
+                    ( model, Nav.pushUrl model.key (Url.toString url) )
 
-        GetActivities result ->
-            case result of
-                Ok activities ->
-                    ( activities
-                    , Cmd.none
-                    )
+                Browser.External href ->
+                    ( model, Nav.load href )
 
-                Err err ->
-                    let
-                        _ = Debug.log "Error" err
-                    in
-                    
-                        ( model
-                        , Cmd.none
-                        )
+        UrlChanged url ->
+            stepUrl url model
+
+        VisitorMsg visitorMsg ->
+            case model.page of
+                Visitor visitor ->
+                    stepVisitor model (Visitor.update visitorMsg visitor)
 
 
 
----- VIEW ----
+-- _ ->
+--     ( model, Cmd.none )
+-- SUBSCRIPTIONS
 
 
-view : Model -> Html Msg
+subscriptions : Model -> Sub Msg
+subscriptions _ =
+    Sub.none
+
+
+
+-- VIEW
+
+
+view : Model -> Browser.Document Msg
 view model =
-    div []
-        [ table
-            []
-            (generateRows model)
-        ]
-
-
-generateRows : Model -> List (Html Msg)
-generateRows model =
     let
-        rows =
-            List.map
-                (\element ->
-                    tr []
-                        [ td [] [ text (String.fromInt element.visitorId) ]
-                        , td [] [ text element.sessionId ]
-                        , td [] [ text (String.fromInt element.experienceId) ]
-                        , td [] [ text element.activityType ]
-                        , td [] [ text element.activityTime ]
-                        , td [] [ text element.activityName ]
-                        ]
-                )
-                model
-
-        header =
-            tr []
-                [ th [] [ text "Visitor Id" ]
-                , th [] [ text "Session Id" ]
-                , th [] [ text "Experience Id" ]
-                , th [] [ text "Activity Type" ]
-                , th [] [ text "Activity Time" ]
-                , th [] [ text "Activity Name" ]
-                ]
+        viewPage toMsg pageView =
+            { title = pageView.title
+            , body = List.map (Html.map toMsg) pageView.body
+            }
     in
-    header :: rows
+    case model.page of
+        Visitor visitorModel ->
+            viewPage VisitorMsg (Visitor.view visitorModel)
 
 
 
----- PROGRAM ----
+-- viewPage : (a -> msg) -> Details a -> Browser.Document msg
+-- viewPage toMsg details =
+--   { title =
+--       details.title
+--   , body =
+--       [ viewHeader details.header
+--       , lazy viewWarning details.warning
+--       , Html.map toMsg <|
+--           div (class "center" :: details.attrs) details.kids
+--       , viewFooter
+--       ]
+--   }
+-- ROUTER
 
 
-main : Program () Model Msg
-main =
-    Browser.element
-        { view = view
-        , init = \_ -> init
-        , update = update
-        , subscriptions = always Sub.none
-        }
+stepUrl : Url.Url -> Model -> ( Model, Cmd Msg )
+stepUrl url model =
+    let
+        parser =
+            oneOf
+                []
+    in
+    case Parser.parse parser url of
+        Just answer ->
+            answer
+
+        Nothing ->
+            ( { model | page = Visitor Visitor.initialModel }
+            , Cmd.none
+            )
 
 
-
----- HTTP ----
-
-
-getVisitorActivities : Cmd Msg
-getVisitorActivities =
-    Http.send GetActivities getActivitesRequest
-
-
-getActivitesRequest : Http.Request (List VisitorActivity)
-getActivitesRequest =
-    Http.request
-        { method = "GET"
-        , headers = [ Http.header "x-authorization-token" "baENwmkjKr6icweK9Y2hTf" ]
-        , url = "https://api.qa.lookbookhq.com/public/v1/visitor_activities"
-        , body = Http.emptyBody
-        , expect = Http.expectJson activitiesDecoder
-        , timeout = Nothing
-        , withCredentials = False
-        }
-
-
-activitiesDecoder : Decoder (List VisitorActivity)
-activitiesDecoder =
-    Decode.field "data" (Decode.list activityDecoder)
-
-
-activityDecoder : Decoder VisitorActivity
-activityDecoder =
-    Decode.succeed VisitorActivity
-        |> required "visitor_id" Decode.int
-        |> required "session_id" Decode.string
-        |> required "experience_id" Decode.int
-        |> required "activity_type" Decode.string
-        |> required "activity_time" Decode.string
-        |> required "activity_name" Decode.string
+stepVisitor : Model -> ( Visitor.Model, Cmd Visitor.Msg ) -> ( Model, Cmd Msg )
+stepVisitor model ( visitor, cmds ) =
+    ( { model | page = Visitor visitor }
+    , Cmd.map VisitorMsg cmds
+    )
