@@ -14,13 +14,15 @@ img {
   max-width: 200px;
 }
 
-table {
-  /* border: 1px solid; */
-  margin: 1em;
+.table {
+  margin-left: 1em;
   width: 98%;
 }
 
-tr {
+th {
+  cursor: pointer;
+}
+/* tr {
   line-height: 1.5em;
 }
 
@@ -28,7 +30,7 @@ th, td {
   border: 1px solid;
   width: 15%;
   border-bottom: 1px solid;
-}
+} */
 
 /* th:last-child, td:last-child {
   border: 0px;
