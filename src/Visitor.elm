@@ -35,6 +35,7 @@ init : ( Model, Cmd Msg )
 init =
     ( []
     , getVisitorActivities
+      -- , Cmd.none
     )
 
 
@@ -118,15 +119,6 @@ generateRows model =
 
 
 
----- PROGRAM ----
--- main : Program () Model Msg
--- main =
---     Browser.element
---         { view = view
---         , init = \_ -> init
---         , update = update
---         , subscriptions = always Sub.none
---         }
 ---- HTTP ----
 
 
