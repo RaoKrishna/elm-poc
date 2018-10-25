@@ -2,7 +2,8 @@ module Visitor exposing (Model, Msg, init, initialModel, update, view)
 
 import Browser
 import Html exposing (Html, div, h1, img, table, td, text, th, tr)
-import Html.Attributes exposing (src, style)
+import Html.Attributes exposing (class, src, style)
+import Html.Events exposing (onClick)
 import Http
 import Json.Decode as Decode exposing (Decoder)
 import Json.Decode.Pipeline exposing (hardcoded, optional, required)
@@ -13,12 +14,18 @@ import Json.Decode.Pipeline exposing (hardcoded, optional, required)
 
 
 type alias Model =
-    List VisitorActivity
+    { activities : List VisitorActivity
+    }
+
+
+type SortByType
+    = ExperienceId
+    | VisitorId
 
 
 initialModel : Model
 initialModel =
-    []
+    { activities = [] }
 
 
 type alias VisitorActivity =
@@ -33,9 +40,8 @@ type alias VisitorActivity =
 
 init : ( Model, Cmd Msg )
 init =
-    ( []
+    ( { activities = [] }
     , getVisitorActivities
-      -- , Cmd.none
     )
 
 
@@ -46,6 +52,7 @@ init =
 type Msg
     = NoOp
     | GetActivities (Result Http.Error (List VisitorActivity))
+    | SortResults SortByType
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
@@ -57,7 +64,7 @@ update msg model =
         GetActivities result ->
             case result of
                 Ok activities ->
-                    ( activities
+                    ( { model | activities = activities }
                     , Cmd.none
                     )
 
@@ -70,6 +77,20 @@ update msg model =
                     , Cmd.none
                     )
 
+        SortResults sortByType ->
+            let
+                sortedActivities =
+                    case sortByType of
+                        ExperienceId ->
+                            List.sortBy .experienceId model.activities
+
+                        VisitorId ->
+                            List.sortBy .visitorId model.activities
+            in
+            ( { model | activities = sortedActivities }
+            , Cmd.none
+            )
+
 
 
 ---- VIEW ----
@@ -81,7 +102,7 @@ view model =
     , body =
         [ div []
             [ table
-                []
+                [ class "table table-striped table-hover" ]
                 (generateRows model)
             ]
         ]
@@ -103,13 +124,13 @@ generateRows model =
                         , td [] [ text element.activityName ]
                         ]
                 )
-                model
+                model.activities
 
         header =
             tr []
-                [ th [] [ text "Visitor Id" ]
+                [ th [ onClick (SortResults VisitorId) ] [ text "Visitor Id" ]
                 , th [] [ text "Session Id" ]
-                , th [] [ text "Experience Id" ]
+                , th [ onClick (SortResults ExperienceId) ] [ text "Experience Id" ]
                 , th [] [ text "Activity Type" ]
                 , th [] [ text "Activity Time" ]
                 , th [] [ text "Activity Name" ]

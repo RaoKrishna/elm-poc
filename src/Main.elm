@@ -49,14 +49,6 @@ init _ url key =
         }
 
 
-
--- goToVisitor
---     { key = key
---     , page = Visitor Visitor.initialModel
---     }
---     Visitor.init
-
-
 type Msg
     = LinkClicked Browser.UrlRequest
     | UrlChanged Url.Url
