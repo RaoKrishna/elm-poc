@@ -7,6 +7,7 @@ import Html.Events exposing (onClick)
 import Http
 import Json.Decode as Decode exposing (Decoder)
 import Json.Decode.Pipeline exposing (hardcoded, optional, required)
+import Ports
 
 
 
@@ -65,7 +66,7 @@ update msg model =
             case result of
                 Ok activities ->
                     ( { model | activities = activities }
-                    , Cmd.none
+                    , Ports.formatTime "Hello"
                     )
 
                 Err err ->
@@ -74,7 +75,7 @@ update msg model =
                             Debug.log "Error" err
                     in
                     ( model
-                    , Cmd.none
+                    , Ports.formatTime "Hello"
                     )
 
         SortResults sortByType ->
