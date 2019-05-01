@@ -49,6 +49,10 @@ init _ url key =
         }
 
 
+
+---- UPDATE ----
+
+
 type Msg
     = LinkClicked Browser.UrlRequest
     | UrlChanged Url.Url
@@ -85,15 +89,6 @@ update msg model =
 
                 _ ->
                     ( model, Cmd.none )
-
-
-
--- SUBSCRIPTIONS
-
-
-subscriptions : Model -> Sub Msg
-subscriptions _ =
-    Sub.none
 
 
 
@@ -145,3 +140,12 @@ goToNotFound model cmds =
     ( { model | page = NotFound }
     , Cmd.map NotFoundMsg cmds
     )
+
+
+
+-- SUBSCRIPTIONS
+
+
+subscriptions : Model -> Sub Msg
+subscriptions _ =
+    Sub.none
